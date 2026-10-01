@@ -4,78 +4,98 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Fulldata - Caza el Nodo</title>
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; user-select: none; }
-    body { background-color: #050811; color: #00e5ff; display: flex; flex-direction: column; justify-content: center; align-items: center; min-height: 100vh; padding: 15px; text-align: center; overflow: hidden; }
-    .card { background: rgba(255, 255, 255, 0.05); border: 2px solid #00e5ff; border-radius: 20px; padding: 20px; width: 100%; max-width: 380px; box-shadow: 0 0 30px rgba(0, 229, 255, 0.2); backdrop-filter: blur(10px); }
-    h1 { font-size: 20px; margin-bottom: 5px; text-transform: uppercase; }
-    p { color: #a0aec0; font-size: 13px; margin-bottom: 15px; line-height: 1.3; }
     
-    .hud { display: flex; justify-content: space-between; font-size: 18px; font-weight: bold; margin-bottom: 15px; background: rgba(0,229,255,0.1); padding: 10px 15px; border-radius: 10px; border: 1px solid rgba(0,229,255,0.3); }
-    .hud span { color: #fff; }
+    /* Colores Fulldata */
+    body { background-color: #09003f; color: #ffffff; display: flex; flex-direction: column; justify-content: center; align-items: center; min-height: 100vh; padding: 15px; text-align: center; overflow: hidden; }
+    
+    .card { background: rgba(255, 255, 255, 0.05); border: 2px solid #0092ff; border-radius: 20px; padding: 25px 20px; width: 100%; max-width: 380px; box-shadow: 0 0 35px rgba(0, 146, 255, 0.25); backdrop-filter: blur(12px); }
+    
+    h1 { font-size: 22px; margin-bottom: 6px; text-transform: uppercase; color: #ffffff; letter-spacing: 0.5px; }
+    p { color: #d0d7de; font-size: 13px; margin-bottom: 20px; line-height: 1.4; }
+    
+    /* Formulario */
+    .form-group { text-align: left; margin-bottom: 15px; }
+    .form-group label { display: block; font-size: 12px; font-weight: bold; color: #0092ff; text-transform: uppercase; margin-bottom: 5px; }
+    .form-control { width: 100%; padding: 14px; background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(0, 146, 255, 0.4); border-radius: 10px; color: #fff; font-size: 15px; outline: none; user-select: text; }
+    .form-control:focus { border-color: #0092ff; box-shadow: 0 0 10px rgba(0, 146, 255, 0.5); }
+    
+    .hud { display: flex; justify-content: space-between; font-size: 18px; font-weight: bold; margin-bottom: 15px; background: rgba(0, 146, 255, 0.15); padding: 12px 18px; border-radius: 12px; border: 1px solid #0092ff; }
+    .hud span { color: #0092ff; }
 
     /* Cuadrícula de Nodos (3x3) */
     .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; width: 100%; aspect-ratio: 1; margin-bottom: 15px; touch-action: manipulation; }
-    .node { background: #0d1527; border: 2px solid rgba(0, 229, 255, 0.2); border-radius: 12px; transition: background-color 0.05s ease; -webkit-tap-highlight-color: transparent; }
-    .node.active { background: #00e5ff !important; border-color: #fff !important; box-shadow: 0 0 25px #00e5ff; }
+    .node { background: rgba(255, 255, 255, 0.03); border: 2px solid rgba(0, 146, 255, 0.2); border-radius: 14px; transition: background-color 0.05s ease; -webkit-tap-highlight-color: transparent; }
+    .node.active { background: #0092ff !important; border-color: #ffffff !important; box-shadow: 0 0 30px #0092ff; }
 
-    .btn-start { width: 100%; padding: 16px; background: linear-gradient(135deg, #00e5ff, #0077ff); color: #000; font-weight: 900; border: none; border-radius: 12px; font-size: 16px; text-transform: uppercase; cursor: pointer; box-shadow: 0 0 15px rgba(0,229,255,0.4); }
+    .btn-action { width: 100%; padding: 16px; background: #0092ff; color: #ffffff; font-weight: 900; border: none; border-radius: 12px; font-size: 16px; text-transform: uppercase; cursor: pointer; box-shadow: 0 0 20px rgba(0, 146, 255, 0.5); transition: transform 0.1s; }
+    .btn-action:active { transform: scale(0.98); }
 
-    /* Estilo Ganador */
-    body.winner { background-color: #00e5ff !important; color: #000 !important; }
-    body.winner .card { background: #fff; border: 4px solid #000; }
-    body.winner h1 { font-size: 26px; color: #000; }
+    .btn-download { width: 100%; padding: 10px; background: transparent; border: 1px dashed rgba(255,255,255,0.3); color: #8a99ad; border-radius: 8px; font-size: 11px; margin-top: 15px; cursor: pointer; }
+
+    /* Estilo Ganador (Pantalla Verde Neón) */
+    body.winner { background-color: #00ff66 !important; color: #000000 !important; }
+    body.winner .card { background: #ffffff; border: 4px solid #000000; box-shadow: 0 0 40px rgba(0, 0, 0, 0.4); }
+    body.winner h1 { color: #000000; }
+    body.winner p { color: #000000; }
 
     /* Estilo Finalizado */
-    body.finished { background-color: #09101f !important; color: #00e5ff !important; }
+    body.finished { background-color: #050026 !important; }
   </style>
 </head>
 <body>
 
 <div class="card" id="app">
-  <h1 id="mainTitle">Sincronización de Red</h1>
-  <p id="mainDesc">Toca los nodos encendidos lo más rápido que puedas antes de que se acabe el tiempo.</p>
+  
+  <!-- FASE 1: REGISTRO DE PARTICIPANTE -->
+  <div id="registerScreen">
+    <h1>Sincronización de Red</h1>
+    <p>Ingresa tus datos para participar y registrar tu velocidad.</p>
+    
+    <div class="form-group">
+      <label for="userName">Nombre y Apellido</label>
+      <input type="text" id="userName" class="form-control" placeholder="Ej. Carlos Pérez" autocomplete="off">
+    </div>
 
-  <div class="hud" id="hud" style="display: none;">
-    <div>Puntos: <span id="scoreText">0</span></div>
-    <div>Tiempo: <span id="timeText">15</span>s</div>
+    <div class="form-group">
+      <label for="userPhone">Teléfono de Contacto</label>
+      <input type="tel" id="userPhone" class="form-control" placeholder="Ej. 04141234567" autocomplete="off">
+    </div>
+
+    <button class="btn-action" style="margin-top: 10px;" onclick="validateAndStart()">⚡ INICIAR PRUEBA</button>
   </div>
 
-  <div class="grid" id="grid" style="display: none;">
-    <div class="node" id="node-0"></div>
-    <div class="node" id="node-1"></div>
-    <div class="node" id="node-2"></div>
-    <div class="node" id="node-3"></div>
-    <div class="node" id="node-4"></div>
-    <div class="node" id="node-5"></div>
-    <div class="node" id="node-6"></div>
-    <div class="node" id="node-7"></div>
-    <div class="node" id="node-8"></div>
+  <!-- FASE 2: PANTALLA DE JUEGO -->
+  <div id="gameScreen" style="display: none;">
+    <h1>¡CAZA LOS NODOS!</h1>
+    <p style="margin-bottom: 10px;">Toca las casillas encendidas lo más rápido posible.</p>
+
+    <div class="hud">
+      <div>Puntos: <span id="scoreText">0</span></div>
+      <div>Tiempo: <span id="timeText">15</span>s</div>
+    </div>
+
+    <div class="grid" id="grid">
+      <div class="node" id="node-0"></div>
+      <div class="node" id="node-1"></div>
+      <div class="node" id="node-2"></div>
+      <div class="node" id="node-3"></div>
+      <div class="node" id="node-4"></div>
+      <div class="node" id="node-5"></div>
+      <div class="node" id="node-6"></div>
+      <div class="node" id="node-7"></div>
+      <div class="node" id="node-8"></div>
+    </div>
   </div>
 
-  <button class="btn-start" id="startBtn" onclick="startGame()">⚡ COMENZAR PRUEBA</button>
+  <!-- FASE 3: RESULTADO FINAL -->
+  <div id="resultScreen" style="display: none;"></div>
+
 </div>
 
 <script>
-  // Firebase Config (Coloca tus credenciales reales)
-  const firebaseConfig = {
-    apiKey: "TU_API_KEY",
-    authDomain: "tu-proyecto.firebaseapp.com",
-    databaseURL: "https://tu-proyecto-default-rtdb.firebaseio.com",
-    projectId: "tu-proyecto",
-    storageBucket: "tu-proyecto.appspot.com",
-    messagingSenderId: "123456789",
-    appId: "1:123456789:web:abcdef"
-  };
-
-  let db = null;
-  if (firebaseConfig.apiKey !== "TU_API_KEY") {
-    firebase.initializeApp(firebaseConfig);
-    db = firebase.database();
-  }
-
+  let playerData = { name: '', phone: '' };
   let score = 0;
   let timeLeft = 15;
   let activeIndex = -1;
@@ -84,13 +104,11 @@
   let isPlaying = false;
   const nodes = [];
 
-  // Inicializar listeners táctiles directos en cada casilla
   window.onload = () => {
     for (let i = 0; i < 9; i++) {
       const el = document.getElementById(`node-${i}`);
       nodes.push(el);
       
-      // Asignar eventos de toque rápido (touchstart / pointerdown) para evitar el delay de 300ms del click en móviles
       const handleTap = (e) => {
         e.preventDefault();
         tapNode(i);
@@ -100,11 +118,25 @@
     }
   };
 
+  function validateAndStart() {
+    const nameInput = document.getElementById('userName').value.trim();
+    const phoneInput = document.getElementById('userPhone').value.trim();
+
+    if (!nameInput || !phoneInput) {
+      alert("Por favor ingresa tu nombre y teléfono para continuar.");
+      return;
+    }
+
+    playerData.name = nameInput;
+    playerData.phone = phoneInput;
+
+    document.getElementById('registerScreen').style.display = 'none';
+    document.getElementById('gameScreen').style.display = 'block';
+
+    startGame();
+  }
+
   function startGame() {
-    document.getElementById('startBtn').style.display = 'none';
-    document.getElementById('hud').style.display = 'flex';
-    document.getElementById('grid').style.display = 'grid';
-    
     score = 0;
     timeLeft = 15;
     isPlaying = true;
@@ -113,7 +145,6 @@
 
     spawnNewNode();
     
-    // Temporizador principal
     timerInterval = setInterval(() => {
       timeLeft--;
       document.getElementById('timeText').innerText = timeLeft;
@@ -126,15 +157,12 @@
   function spawnNewNode() {
     if (!isPlaying) return;
 
-    // Limpiar temporizador previo
     if (gameTimeout) clearTimeout(gameTimeout);
 
-    // Apagar nodo encendido previamente
     if (activeIndex !== -1 && nodes[activeIndex]) {
       nodes[activeIndex].classList.remove('active');
     }
 
-    // Seleccionar una nueva casilla al azar distinta a la anterior
     let newIndex;
     do {
       newIndex = Math.floor(Math.random() * 9);
@@ -143,7 +171,6 @@
     activeIndex = newIndex;
     nodes[activeIndex].classList.add('active');
 
-    // Si el usuario no la toca en 600 ms, salta automáticamente a otra
     gameTimeout = setTimeout(() => {
       if (isPlaying) spawnNewNode();
     }, 600);
@@ -152,14 +179,10 @@
   function tapNode(index) {
     if (!isPlaying) return;
 
-    // Verificar si la casilla tocada es la activa actualmente
     if (index === activeIndex) {
       score++;
       document.getElementById('scoreText').innerText = score;
-      
       if (navigator.vibrate) navigator.vibrate(30);
-
-      // Inmediatamente cambiar a la siguiente casilla
       spawnNewNode();
     }
   }
@@ -173,72 +196,106 @@
       nodes[activeIndex].classList.remove('active');
     }
 
-    submitScore(score);
+    document.getElementById('gameScreen').style.display = 'none';
+    processAndSaveResult(score);
   }
 
-  function submitScore(finalScore) {
-    document.body.className = "finished";
-    
-    if (!db) {
-      document.getElementById('app').innerHTML = `
-        <h2>¡TIEMPO AGOTADO!</h2>
-        <p style="font-size: 18px; color: #fff; margin: 15px 0;">Tu puntaje final: <b style="color:#00e5ff">${finalScore}</b> nodos.</p>
-        <p style="color:#a0aec0; font-size: 12px;">Conecta Firebase para calcular el Top 2 en vivo.</p>
-      `;
-      return;
-    }
+  // ALMACENAMIENTO LOCAL Y GENERACIÓN DE TXT
+  function processAndSaveResult(finalScore) {
+    const resultScreen = document.getElementById('resultScreen');
+    resultScreen.style.display = 'block';
 
-    document.getElementById('app').innerHTML = `
-      <h2>PROCESANDO PUNTOS...</h2>
-      <p style="font-size: 18px; color: #fff; margin: 15px 0;">Tu puntaje final: <b style="color:#00e5ff">${finalScore}</b> nodos.</p>
-      <p style="color:#a0aec0; font-size: 12px;">Verificando posición en la red central...</p>
-    `;
+    // 1. Cargar historial local
+    let history = JSON.parse(localStorage.getItem('fulldata_leaderboard') || "[]");
 
-    const scoresRef = db.ref('leaderboard');
-    const userRef = scoresRef.push();
-    
-    userRef.set({
+    // 2. Crear nuevo registro
+    const newRecord = {
+      id: Date.now(),
+      name: playerData.name,
+      phone: playerData.phone,
       score: finalScore,
-      time: Date.now()
-    }).then(() => {
-      checkRanking(userRef.key, finalScore);
-    });
+      timestamp: new Date().toLocaleTimeString()
+    };
+
+    history.push(newRecord);
+
+    // 3. Ordenar de mayor a menor puntaje
+    history.sort((a, b) => b.score - a.score);
+
+    // 4. Guardar en localStorage
+    localStorage.setItem('fulldata_leaderboard', JSON.stringify(history));
+
+    // 5. Verificar si este participante quedó en el TOP 2
+    const topTwo = history.slice(0, 2);
+    const isWinner = topTwo.some(item => item.id === newRecord.id);
+
+    if (isWinner) {
+      const position = topTwo.findIndex(item => item.id === newRecord.id) + 1;
+      showWinnerScreen(position, playerData.name, finalScore);
+    } else {
+      showStandardScreen(playerData.name, finalScore);
+    }
   }
 
-  function checkRanking(myKey, myScore) {
-    db.ref('leaderboard').orderByChild('score').limitToLast(2).once('value', (snapshot) => {
-      let topTwoKeys = [];
-      snapshot.forEach(child => {
-        topTwoKeys.unshift(child.key);
-      });
-
-      if (topTwoKeys.includes(myKey)) {
-        let pos = topTwoKeys.indexOf(myKey) + 1;
-        showWinner(pos, myScore);
-      } else {
-        showLoser(myScore);
-      }
-    });
-  }
-
-  function showWinner(pos, myScore) {
+  function showWinnerScreen(pos, name, score) {
     document.body.className = "winner";
-    document.getElementById('app').innerHTML = `
-      <h1>⚡ ¡NODO LÍDER! ⚡</h1>
-      <p style="font-size: 22px; font-weight: bold; color:#000; margin: 10px 0;">¡TOP #${pos} CON ${myScore} PUNTOS!</p>
-      <p style="color:#000; font-weight: 600;">Levanta tu teléfono en el aire con esta pantalla verde encendida y sube al escenario.</p>
+    const resultScreen = document.getElementById('resultScreen');
+    
+    resultScreen.innerHTML = `
+      <h1 style="font-size: 26px;">⚡ ¡GANADOR TOP #${pos}! ⚡</h1>
+      <div style="background: #000; color: #00ff66; padding: 15px; border-radius: 12px; margin: 15px 0;">
+        <p style="font-size: 20px; font-weight: bold; color: #fff;">${name.toUpperCase()}</p>
+        <p style="font-size: 36px; font-weight: 900; color: #00ff66;">${score} PUNTOS</p>
+      </div>
+      <p style="font-weight: 700; font-size: 14px;">Muestra esta pantalla al moderador en la tarima para validar tu premio.</p>
+      <button class="btn-download" onclick="exportToTXT()">📄 Descargar Registro TXT</button>
     `;
     if (navigator.vibrate) navigator.vibrate([300, 100, 300, 100, 500]);
   }
 
-  function showLoser(myScore) {
-    document.getElementById('app').innerHTML = `
-      <h2 style="color:#ff0055;">PUNTAJE REGISTRADO</h2>
-      <p style="font-size: 20px; color: #fff; margin: 15px 0;">Puntuación: <b>${myScore}</b></p>
-      <p style="color:#a0aec0; font-size: 13px;">Los 2 puntajes más altos ya ocuparon la cima de la red.</p>
+  function showStandardScreen(name, score) {
+    document.body.className = "finished";
+    const resultScreen = document.getElementById('resultScreen');
+    
+    resultScreen.innerHTML = `
+      <h2 style="color:#0092ff;">PRUEBA COMPLETADA</h2>
+      <p style="font-size: 15px; margin: 10px 0;">Participante: <b>${name}</b></p>
+      <p style="font-size: 32px; font-weight: 900; color: #ffffff; margin-bottom: 10px;">${score} NODOS</p>
+      <p style="color:#a0aec0; font-size: 12px;">Tu puntaje ha sido guardado exitosamente.</p>
       <br>
-      <p style="color:#00e5ff; font-size:12px;">En un mundo con lag, solo la ultra-velocidad de Fulldata te salva.</p>
+      <p style="color:#0092ff; font-size:12px; font-weight: bold;">En un mundo con lag, solo la ultra-velocidad de Fulldata te salva.</p>
+      <button class="btn-download" onclick="exportToTXT()">📄 Descargar Registro TXT</button>
     `;
+  }
+
+  // Función para descargar el archivo .txt con la estructura exacta
+  function exportToTXT() {
+    let history = JSON.parse(localStorage.getItem('fulldata_leaderboard') || "[]");
+    
+    if (history.length === 0) {
+      alert("No hay registros almacenados.");
+      return;
+    }
+
+    let txtContent = "===========================================\n";
+    txtContent += "    FULLDATA - REGISTRO DE PARTICIPANTES   \n";
+    txtContent += "===========================================\n\n";
+
+    txtContent += "--- TOP 2 GANADORES ---\n";
+    history.slice(0, 2).forEach((item, index) => {
+      txtContent += `[LUGAR #${index + 1}] ${item.name} | Tel: ${item.phone} | Puntaje: ${item.score} pts | Hora: ${item.timestamp}\n`;
+    });
+
+    txtContent += "\n--- HISTORIAL COMPLETO DE PARTICIPANTES ---\n";
+    history.forEach((item, index) => {
+      txtContent += `#${index + 1} | Nombre: ${item.name} | Tel: ${item.phone} | Puntaje: ${item.score} | Hora: ${item.timestamp}\n`;
+    });
+
+    const blob = new Blob([txtContent], { type: 'text/plain;charset=utf-8' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `resultados_fulldata_${new Date().toISOString().slice(0,10)}.txt`;
+    link.click();
   }
 </script>
 </body>
