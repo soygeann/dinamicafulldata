@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Fulldata - Carga de Red</title>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, sans-serif; user-select: none; }
+    body { background-color: #050811; color: #00e5ff; display: flex; flex-direction: column; justify-content: center; align-items: center; min-height: 100vh; padding: 20px; text-align: center; overflow: hidden; }
+    .card { background: rgba(255, 255, 255, 0.05); border: 2px solid #00e5ff; border-radius: 20px; padding: 30px 20px; width: 100%; max-width: 380px; box-shadow: 0 0 30px rgba(0, 229, 255, 0.2); }
+    h1 { font-size: 20px; margin-bottom: 10px; text-transform: uppercase; }
+    p { color: #a0aec0; font-size: 14px; margin-bottom: 25px; }
+    .progress-container { width: 100%; background: #1a202c; border-radius: 10px; height: 35px; border: 1px solid #00e5ff; overflow: hidden; margin-bottom: 20px; }
+    .progress-bar { width: 0%; height: 100%; background: linear-gradient(90deg, #00e5ff, #0077ff); transition: width 0.1s ease-out; }
+    .shake-icon { font-size: 50px; margin-bottom: 15px; animation: shake 0.5s infinite alternate; }
+    @keyframes shake { from { transform: rotate(-10deg); } to { transform: rotate(10deg); } }
+
+    /* Estilo Ganador */
+    body.winner { background-color: #00e5ff !important; color: #000 !important; }
+    body.winner .card { background: #fff; border: 4px solid #000; }
+    body.winner h1 { font-size: 28px; color: #000; }
+
+    /* Estilo Agotado */
+    body.loser { background-color: #1a0007 !important; color: #ff0055 !important; }
+    body.loser .card { border-color: #ff0055; }
+  </style>
+</head>
+<body>
+
+<div class="card" id="app">
+  <div class="shake-icon">📱💥</div>
+  <h1>¡AGITA TU TELÉFONO!</h1>
+  <p>Genera la frecuencia cinemática para reactivar el nodo de alta velocidad de Fulldata.</p>
+  
+  <div class="progress-container">
+    <div class="progress-bar" id="bar"></div>
+  </div>
+  <div id="percentText" style="font-weight: bold; font-size: 18px;">0%</div>
+</div>
+
+<script>
+  // Configuración Firebase
+  const firebaseConfig = {
+    apiKey: "TU_API_KEY",
+    authDomain: "tu-proyecto.firebaseapp.com",
+    databaseURL: "https://tu-proyecto-default-rtdb.firebaseio.com",
+    projectId: "tu-proyecto",
+    storageBucket: "tu-proyecto.appspot.com",
+    messagingSenderId: "123456789",
+    appId: "1:123456789:web:abcdef"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
+
+  let energy = 0;
+  let isFinished = false;
+
+  // Detección de agitación vía Acelerómetro
+  if (window.DeviceMotionEvent) {
+    window.addEventListener('devicemotion', (e) => {
+      if (isFinished) return;
+
+      let acc = e.accelerationIncludingGravity;
+      let totalAcc = Math.abs(acc.x) + Math.abs(acc.y) + Math.abs(acc.z);
+
+      // Si el movimiento sobrepasa el umbral
+      if (totalAcc > 25) {
+        energy += 3; // Incrementa la energía
+        if (energy > 100) energy = 100;
+        
+        document.getElementById('bar').style.width = energy + '%';
+        document.getElementById('percentText').innerText = Math.round(energy) + '%';
+
+        if (energy >= 100) {
+          isFinished = true;
+          claimNode();
+        }
+      }
+    });
+  }
+
+  function claimNode() {
+    const winnersRef = db.ref('winners_motion');
+    winnersRef.transaction((current) => {
+      if (current === null) return [{ time: Date.now() }];
+      if (current.length < 2) {
+        current.push({ time: Date.now() });
+        return current;
+      }
+      return;
+    }, (err, committed, snapshot) => {
+      if (committed) {
+        const list = snapshot.val();
+        if (list && list.length <= 2) {
+          showWinner(list.length);
+        } else {
+          showLoser();
+        }
+      } else {
+        showLoser();
+      }
+    });
+  }
+
+  function showWinner(pos) {
+    document.body.className = "winner";
+    document.getElementById('app').innerHTML = `
+      <h1>⚡ ¡SISTEMA RESTAURADO! ⚡</h1>
+      <p style="font-size: 20px; font-weight: bold; color:#000;">¡ERES EL GANADOR #${pos}!</p>
+      <br>
+      <p style="color:#000; font-weight: 600;">Levanta tu teléfono en el aire con esta pantalla verde encendida para que te vean desde el escenario.</p>
+    `;
+    if (navigator.vibrate) navigator.vibrate([300, 100, 300, 100, 500]);
+  }
+
+  function showLoser() {
+    document.body.className = "loser";
+    document.getElementById('app').innerHTML = `
+      <h2>⚠ NODOS COMPLETADOS</h2>
+      <p>Los 2 primeros usuarios en agitar su teléfono restablecieron la red antes.</p>
+      <br>
+      <p style="color:#a0aec0; font-size:12px;">En un mundo de lag, solo la velocidad real de Fulldata te salva.</p>
+    `;
+  }
+</script>
+</body>
+</html>
