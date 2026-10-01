@@ -7,20 +7,26 @@
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, sans-serif; user-select: none; }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; user-select: none; }
     body { background-color: #050811; color: #00e5ff; display: flex; flex-direction: column; justify-content: center; align-items: center; min-height: 100vh; padding: 20px; text-align: center; overflow: hidden; }
-    .card { background: rgba(255, 255, 255, 0.05); border: 2px solid #00e5ff; border-radius: 20px; padding: 30px 20px; width: 100%; max-width: 380px; box-shadow: 0 0 30px rgba(0, 229, 255, 0.2); }
+    .card { background: rgba(255, 255, 255, 0.05); border: 2px solid #00e5ff; border-radius: 20px; padding: 30px 20px; width: 100%; max-width: 380px; box-shadow: 0 0 30px rgba(0, 229, 255, 0.2); backdrop-filter: blur(10px); }
     h1 { font-size: 20px; margin-bottom: 10px; text-transform: uppercase; }
-    p { color: #a0aec0; font-size: 14px; margin-bottom: 25px; }
-    .progress-container { width: 100%; background: #1a202c; border-radius: 10px; height: 35px; border: 1px solid #00e5ff; overflow: hidden; margin-bottom: 20px; }
-    .progress-bar { width: 0%; height: 100%; background: linear-gradient(90deg, #00e5ff, #0077ff); transition: width 0.1s ease-out; }
-    .shake-icon { font-size: 50px; margin-bottom: 15px; animation: shake 0.5s infinite alternate; }
-    @keyframes shake { from { transform: rotate(-10deg); } to { transform: rotate(10deg); } }
+    p { color: #a0aec0; font-size: 14px; margin-bottom: 25px; line-height: 1.4; }
+    .progress-container { width: 100%; background: #1a202c; border-radius: 10px; height: 35px; border: 1px solid #00e5ff; overflow: hidden; margin-bottom: 15px; }
+    .progress-bar { width: 0%; height: 100%; background: linear-gradient(90deg, #00e5ff, #0077ff); transition: width 0.08s ease-out; }
+    .shake-icon { font-size: 50px; margin-bottom: 15px; animation: shake 0.6s infinite alternate; }
+    @keyframes shake { from { transform: rotate(-12deg); } to { transform: rotate(12deg); } }
+
+    /* Botón de Inicio y Permisos */
+    .btn-start { width: 100%; padding: 16px; background: linear-gradient(135deg, #00e5ff, #0077ff); color: #000; font-weight: 900; border: none; border-radius: 12px; font-size: 16px; text-transform: uppercase; cursor: pointer; box-shadow: 0 0 15px rgba(0,229,255,0.4); }
+
+    /* Botón de Respaldo por Taps */
+    .btn-tap-fallback { width: 100%; padding: 12px; background: transparent; border: 1px solid rgba(0, 229, 255, 0.4); color: #00e5ff; font-weight: bold; border-radius: 8px; margin-top: 15px; font-size: 12px; text-transform: uppercase; cursor: pointer; }
 
     /* Estilo Ganador */
     body.winner { background-color: #00e5ff !important; color: #000 !important; }
     body.winner .card { background: #fff; border: 4px solid #000; }
-    body.winner h1 { font-size: 28px; color: #000; }
+    body.winner h1 { font-size: 26px; color: #000; }
 
     /* Estilo Agotado */
     body.loser { background-color: #1a0007 !important; color: #ff0055 !important; }
@@ -31,17 +37,25 @@
 
 <div class="card" id="app">
   <div class="shake-icon">📱💥</div>
-  <h1>¡AGITA TU TELÉFONO!</h1>
-  <p>Genera la frecuencia cinemática para reactivar el nodo de alta velocidad de Fulldata.</p>
+  <h1 id="mainTitle">ACTIVACIÓN DE RED</h1>
+  <p id="mainDesc">Presiona el botón para sincronizar tus sensores e iniciar la carga cinemática.</p>
   
-  <div class="progress-container">
-    <div class="progress-bar" id="bar"></div>
+  <button class="btn-start" id="startBtn" onclick="initSensors()">⚡ INICIAR Y PERMITIR SENSORES</button>
+
+  <div id="gameUI" style="display: none;">
+    <div class="progress-container">
+      <div class="progress-bar" id="bar"></div>
+    </div>
+    <div id="percentText" style="font-weight: bold; font-size: 22px; margin-bottom: 10px;">0%</div>
+    <p style="font-size: 12px; color: #00e5ff;">¡AGITA FUERTE TU TELÉFONO EN EL AIRE!</p>
+
+    <!-- Botón de respaldo si el acelerómetro no responde en ese equipo -->
+    <button class="btn-tap-fallback" onclick="manualIncrement()">¿No carga? Toca aquí repetidamente</button>
   </div>
-  <div id="percentText" style="font-weight: bold; font-size: 18px;">0%</div>
 </div>
 
 <script>
-  // Configuración Firebase
+  // Firebase Config (Sustituye con tus credenciales reales)
   const firebaseConfig = {
     apiKey: "TU_API_KEY",
     authDomain: "tu-proyecto.firebaseapp.com",
@@ -51,38 +65,93 @@
     messagingSenderId: "123456789",
     appId: "1:123456789:web:abcdef"
   };
-  firebase.initializeApp(firebaseConfig);
-  const db = firebase.database();
+  
+  if (firebaseConfig.apiKey !== "TU_API_KEY") {
+    firebase.initializeApp(firebaseConfig);
+  }
 
   let energy = 0;
   let isFinished = false;
+  let lastX = null, lastY = null, lastZ = null;
 
-  // Detección de agitación vía Acelerómetro
-  if (window.DeviceMotionEvent) {
-    window.addEventListener('devicemotion', (e) => {
-      if (isFinished) return;
+  function initSensors() {
+    document.getElementById('startBtn').style.display = 'none';
+    document.getElementById('mainTitle').innerText = '¡AGITA TU TELÉFONO!';
+    document.getElementById('mainDesc').innerText = 'Genera energía cinemática para reactivar el nodo de Fulldata.';
+    document.getElementById('gameUI').style.display = 'block';
 
-      let acc = e.accelerationIncludingGravity;
-      let totalAcc = Math.abs(acc.x) + Math.abs(acc.y) + Math.abs(acc.z);
-
-      // Si el movimiento sobrepasa el umbral
-      if (totalAcc > 25) {
-        energy += 3; // Incrementa la energía
-        if (energy > 100) energy = 100;
-        
-        document.getElementById('bar').style.width = energy + '%';
-        document.getElementById('percentText').innerText = Math.round(energy) + '%';
-
-        if (energy >= 100) {
-          isFinished = true;
-          claimNode();
-        }
-      }
-    });
+    // Solicitud explícita de permisos para iOS 13+
+    if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
+      DeviceMotionEvent.requestPermission()
+        .then(response => {
+          if (response === 'granted') {
+            window.addEventListener('devicemotion', handleMotion);
+          } else {
+            alert('Permiso denegado. Puedes usar el botón de toque manual.');
+          }
+        })
+        .catch(console.error);
+    } else if (window.DeviceMotionEvent) {
+      // Android / iOS antiguo
+      window.addEventListener('devicemotion', handleMotion);
+    }
   }
 
-  function claimNode() {
+  function handleMotion(event) {
+    if (isFinished) return;
+
+    let acc = event.acceleration || event.accelerationIncludingGravity;
+    if (!acc) return;
+
+    let x = acc.x || 0;
+    let y = acc.y || 0;
+    let z = acc.z || 0;
+
+    if (lastX !== null) {
+      let deltaX = Math.abs(x - lastX);
+      let deltaY = Math.abs(y - lastY);
+      let deltaZ = Math.abs(z - lastZ);
+      
+      let speed = deltaX + deltaY + deltaZ;
+
+      // Umbral adaptativo de agitación
+      if (speed > 12) { 
+        addEnergy(2.5);
+      }
+    }
+
+    lastX = x;
+    lastY = y;
+    lastZ = z;
+  }
+
+  function manualIncrement() {
+    if (!isFinished) addEnergy(4);
+  }
+
+  function addEnergy(amount) {
+    energy += amount;
+    if (energy > 100) energy = 100;
+
+    document.getElementById('bar').style.width = energy + '%';
+    document.getElementById('percentText').innerText = Math.round(energy) + '%';
+
+    if (energy >= 100 && !isFinished) {
+      isFinished = true;
+      claimWinner();
+    }
+  }
+
+  function claimWinner() {
+    if (typeof firebase === 'undefined' || firebaseConfig.apiKey === "TU_API_KEY") {
+      // Si Firebase aún no está configurado, muestra victoria local para pruebas
+      showWinner(1);
+      return;
+    }
+
+    const db = firebase.database();
     const winnersRef = db.ref('winners_motion');
+
     winnersRef.transaction((current) => {
       if (current === null) return [{ time: Date.now() }];
       if (current.length < 2) {
@@ -108,8 +177,7 @@
     document.body.className = "winner";
     document.getElementById('app').innerHTML = `
       <h1>⚡ ¡SISTEMA RESTAURADO! ⚡</h1>
-      <p style="font-size: 20px; font-weight: bold; color:#000;">¡ERES EL GANADOR #${pos}!</p>
-      <br>
+      <p style="font-size: 20px; font-weight: bold; color:#000; margin-bottom:15px;">¡ERES EL GANADOR #${pos}!</p>
       <p style="color:#000; font-weight: 600;">Levanta tu teléfono en el aire con esta pantalla verde encendida para que te vean desde el escenario.</p>
     `;
     if (navigator.vibrate) navigator.vibrate([300, 100, 300, 100, 500]);
@@ -118,10 +186,10 @@
   function showLoser() {
     document.body.className = "loser";
     document.getElementById('app').innerHTML = `
-      <h2>⚠ NODOS COMPLETADOS</h2>
+      <h2>⚠ NODOS OCUPADOS</h2>
       <p>Los 2 primeros usuarios en agitar su teléfono restablecieron la red antes.</p>
       <br>
-      <p style="color:#a0aec0; font-size:12px;">En un mundo de lag, solo la velocidad real de Fulldata te salva.</p>
+      <p style="color:#a0aec0; font-size:12px;">En un mundo con lag, solo la velocidad real de Fulldata te salva.</p>
     `;
   }
 </script>
