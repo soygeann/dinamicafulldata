@@ -3,59 +3,63 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Fulldata - Carga de Red</title>
+  <title>Fulldata - Caza el Nodo</title>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; user-select: none; }
-    body { background-color: #050811; color: #00e5ff; display: flex; flex-direction: column; justify-content: center; align-items: center; min-height: 100vh; padding: 20px; text-align: center; overflow: hidden; }
-    .card { background: rgba(255, 255, 255, 0.05); border: 2px solid #00e5ff; border-radius: 20px; padding: 30px 20px; width: 100%; max-width: 380px; box-shadow: 0 0 30px rgba(0, 229, 255, 0.2); backdrop-filter: blur(10px); }
-    h1 { font-size: 20px; margin-bottom: 10px; text-transform: uppercase; }
-    p { color: #a0aec0; font-size: 14px; margin-bottom: 25px; line-height: 1.4; }
-    .progress-container { width: 100%; background: #1a202c; border-radius: 10px; height: 35px; border: 1px solid #00e5ff; overflow: hidden; margin-bottom: 15px; }
-    .progress-bar { width: 0%; height: 100%; background: linear-gradient(90deg, #00e5ff, #0077ff); transition: width 0.08s ease-out; }
-    .shake-icon { font-size: 50px; margin-bottom: 15px; animation: shake 0.6s infinite alternate; }
-    @keyframes shake { from { transform: rotate(-12deg); } to { transform: rotate(12deg); } }
+    body { background-color: #050811; color: #00e5ff; display: flex; flex-direction: column; justify-content: center; align-items: center; min-height: 100vh; padding: 15px; text-align: center; overflow: hidden; }
+    .card { background: rgba(255, 255, 255, 0.05); border: 2px solid #00e5ff; border-radius: 20px; padding: 20px; width: 100%; max-width: 380px; box-shadow: 0 0 30px rgba(0, 229, 255, 0.2); backdrop-filter: blur(10px); }
+    h1 { font-size: 20px; margin-bottom: 5px; text-transform: uppercase; }
+    p { color: #a0aec0; font-size: 13px; margin-bottom: 15px; line-height: 1.3; }
+    
+    .hud { display: flex; justify-content: space-between; font-size: 18px; font-weight: bold; margin-bottom: 15px; background: rgba(0,229,255,0.1); padding: 10px 15px; border-radius: 10px; border: 1px solid rgba(0,229,255,0.3); }
+    .hud span { color: #fff; }
 
-    /* Botón de Inicio y Permisos */
+    /* Cuadrícula de Nodos (3x3) */
+    .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; width: 100%; aspect-ratio: 1; margin-bottom: 15px; }
+    .node { background: #0d1527; border: 2px solid rgba(0, 229, 255, 0.2); border-radius: 12px; transition: transform 0.05s, background-color 0.05s; -webkit-tap-highlight-color: transparent; }
+    .node.active { background: #00e5ff; border-color: #fff; box-shadow: 0 0 20px #00e5ff; transform: scale(0.96); }
+
     .btn-start { width: 100%; padding: 16px; background: linear-gradient(135deg, #00e5ff, #0077ff); color: #000; font-weight: 900; border: none; border-radius: 12px; font-size: 16px; text-transform: uppercase; cursor: pointer; box-shadow: 0 0 15px rgba(0,229,255,0.4); }
-
-    /* Botón de Respaldo por Taps */
-    .btn-tap-fallback { width: 100%; padding: 12px; background: transparent; border: 1px solid rgba(0, 229, 255, 0.4); color: #00e5ff; font-weight: bold; border-radius: 8px; margin-top: 15px; font-size: 12px; text-transform: uppercase; cursor: pointer; }
 
     /* Estilo Ganador */
     body.winner { background-color: #00e5ff !important; color: #000 !important; }
     body.winner .card { background: #fff; border: 4px solid #000; }
     body.winner h1 { font-size: 26px; color: #000; }
 
-    /* Estilo Agotado */
-    body.loser { background-color: #1a0007 !important; color: #ff0055 !important; }
-    body.loser .card { border-color: #ff0055; }
+    /* Estilo Finalizado / Esperando resultados */
+    body.finished { background-color: #09101f !important; color: #00e5ff !important; }
   </style>
 </head>
 <body>
 
 <div class="card" id="app">
-  <div class="shake-icon">📱💥</div>
-  <h1 id="mainTitle">ACTIVACIÓN DE RED</h1>
-  <p id="mainDesc">Presiona el botón para sincronizar tus sensores e iniciar la carga cinemática.</p>
-  
-  <button class="btn-start" id="startBtn" onclick="initSensors()">⚡ INICIAR Y PERMITIR SENSORES</button>
+  <h1 id="mainTitle">Sincronización de Red</h1>
+  <p id="mainDesc">Toca los nodos encendidos lo más rápido que puedas antes de que se acabe el tiempo.</p>
 
-  <div id="gameUI" style="display: none;">
-    <div class="progress-container">
-      <div class="progress-bar" id="bar"></div>
-    </div>
-    <div id="percentText" style="font-weight: bold; font-size: 22px; margin-bottom: 10px;">0%</div>
-    <p style="font-size: 12px; color: #00e5ff;">¡AGITA FUERTE TU TELÉFONO EN EL AIRE!</p>
-
-    <!-- Botón de respaldo si el acelerómetro no responde en ese equipo -->
-    <button class="btn-tap-fallback" onclick="manualIncrement()">¿No carga? Toca aquí repetidamente</button>
+  <div class="hud" id="hud" style="display: none;">
+    <div>Puntos: <span id="scoreText">0</span></div>
+    <div>Tiempo: <span id="timeText">15</span>s</div>
   </div>
+
+  <div class="grid" id="grid" style="display: none;">
+    <div class="node" onclick="tapNode(0)"></div>
+    <div class="node" onclick="tapNode(1)"></div>
+    <div class="node" onclick="tapNode(2)"></div>
+    <div class="node" onclick="tapNode(3)"></div>
+    <div class="node" onclick="tapNode(4)"></div>
+    <div class="node" onclick="tapNode(5)"></div>
+    <div class="node" onclick="tapNode(6)"></div>
+    <div class="node" onclick="tapNode(7)"></div>
+    <div class="node" onclick="tapNode(8)"></div>
+  </div>
+
+  <button class="btn-start" id="startBtn" onclick="startGame()">⚡ COMENCAR PRUEBA</button>
 </div>
 
 <script>
-  // Firebase Config (Sustituye con tus credenciales reales)
+  // Firebase Config (Coloca tus credenciales reales de Firebase)
   const firebaseConfig = {
     apiKey: "TU_API_KEY",
     authDomain: "tu-proyecto.firebaseapp.com",
@@ -65,131 +69,157 @@
     messagingSenderId: "123456789",
     appId: "1:123456789:web:abcdef"
   };
-  
+
+  let db = null;
   if (firebaseConfig.apiKey !== "TU_API_KEY") {
     firebase.initializeApp(firebaseConfig);
+    db = firebase.database();
   }
 
-  let energy = 0;
-  let isFinished = false;
-  let lastX = null, lastY = null, lastZ = null;
+  let score = 0;
+  let timeLeft = 15;
+  let activeIndex = -1;
+  let gameInterval = null;
+  let timerInterval = null;
+  let isPlaying = false;
+  const nodes = document.getElementsByClassName('node');
 
-  function initSensors() {
+  function startGame() {
     document.getElementById('startBtn').style.display = 'none';
-    document.getElementById('mainTitle').innerText = '¡AGITA TU TELÉFONO!';
-    document.getElementById('mainDesc').innerText = 'Genera energía cinemática para reactivar el nodo de Fulldata.';
-    document.getElementById('gameUI').style.display = 'block';
+    document.getElementById('hud').style.display = 'flex';
+    document.getElementById('grid').style.display = 'grid';
+    
+    score = 0;
+    timeLeft = 15;
+    isPlaying = true;
+    document.getElementById('scoreText').innerText = score;
+    document.getElementById('timeText').innerText = timeLeft;
 
-    // Solicitud explícita de permisos para iOS 13+
-    if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
-      DeviceMotionEvent.requestPermission()
-        .then(response => {
-          if (response === 'granted') {
-            window.addEventListener('devicemotion', handleMotion);
-          } else {
-            alert('Permiso denegado. Puedes usar el botón de toque manual.');
-          }
-        })
-        .catch(console.error);
-    } else if (window.DeviceMotionEvent) {
-      // Android / iOS antiguo
-      window.addEventListener('devicemotion', handleMotion);
-    }
+    nextPulse();
+    
+    // Temporizador de cuenta regresiva
+    timerInterval = setInterval(() => {
+      timeLeft--;
+      document.getElementById('timeText').innerText = timeLeft;
+      if (timeLeft <= 0) {
+        endGame();
+      }
+    }, 1000);
   }
 
-  function handleMotion(event) {
-    if (isFinished) return;
+  function nextPulse() {
+    if (!isPlaying) return;
 
-    let acc = event.acceleration || event.accelerationIncludingGravity;
-    if (!acc) return;
+    // Apagar nodo anterior
+    if (activeIndex !== -1) {
+      nodes[activeIndex].classList.remove('active');
+    }
 
-    let x = acc.x || 0;
-    let y = acc.y || 0;
-    let z = acc.z || 0;
+    // Elegir nuevo nodo al azar
+    let newIndex;
+    do {
+      newIndex = Math.floor(Math.random() * 9);
+    } while (newIndex === activeIndex);
 
-    if (lastX !== null) {
-      let deltaX = Math.abs(x - lastX);
-      let deltaY = Math.abs(y - lastY);
-      let deltaZ = Math.abs(z - lastZ);
+    activeIndex = newIndex;
+    nodes[activeIndex].classList.add('active');
+
+    // Cambiar de casilla cada 450 ms (velocidad rápida)
+    clearTimeout(gameInterval);
+    gameInterval = setTimeout(nextPulse, 450);
+  }
+
+  function tapNode(index) {
+    if (!isPlaying) return;
+
+    if (index === activeIndex) {
+      score++;
+      document.getElementById('scoreText').innerText = score;
       
-      let speed = deltaX + deltaY + deltaZ;
-
-      // Umbral adaptativo de agitación
-      if (speed > 12) { 
-        addEnergy(2.5);
-      }
-    }
-
-    lastX = x;
-    lastY = y;
-    lastZ = z;
-  }
-
-  function manualIncrement() {
-    if (!isFinished) addEnergy(4);
-  }
-
-  function addEnergy(amount) {
-    energy += amount;
-    if (energy > 100) energy = 100;
-
-    document.getElementById('bar').style.width = energy + '%';
-    document.getElementById('percentText').innerText = Math.round(energy) + '%';
-
-    if (energy >= 100 && !isFinished) {
-      isFinished = true;
-      claimWinner();
+      // Vibración rápida al acertar
+      if (navigator.vibrate) navigator.vibrate(40);
+      
+      // Saltar inmediatamente a la siguiente casilla al acertar
+      nextPulse();
     }
   }
 
-  function claimWinner() {
-    if (typeof firebase === 'undefined' || firebaseConfig.apiKey === "TU_API_KEY") {
-      // Si Firebase aún no está configurado, muestra victoria local para pruebas
-      showWinner(1);
+  function endGame() {
+    isPlaying = false;
+    clearInterval(timerInterval);
+    clearTimeout(gameInterval);
+
+    if (activeIndex !== -1) {
+      nodes[activeIndex].classList.remove('active');
+    }
+
+    submitScore(score);
+  }
+
+  function submitScore(finalScore) {
+    document.body.className = "finished";
+    
+    if (!db) {
+      // Prueba local sin Firebase
+      document.getElementById('app').innerHTML = `
+        <h2>¡TIEMPO AGOTADO!</h2>
+        <p style="font-size: 18px; color: #fff; margin: 15px 0;">Tu puntaje final: <b style="color:#00e5ff">${finalScore}</b> nodos.</p>
+        <p style="color:#a0aec0; font-size: 12px;">Conecta Firebase para calcular el Top 2 en vivo.</p>
+      `;
       return;
     }
 
-    const db = firebase.database();
-    const winnersRef = db.ref('winners_motion');
+    document.getElementById('app').innerHTML = `
+      <h2>PROCESANDO PUNTOS...</h2>
+      <p style="font-size: 18px; color: #fff; margin: 15px 0;">Tu puntaje final: <b style="color:#00e5ff">${finalScore}</b> nodos.</p>
+      <p style="color:#a0aec0; font-size: 12px;">Verificando posición en la red central...</p>
+    `;
 
-    winnersRef.transaction((current) => {
-      if (current === null) return [{ time: Date.now() }];
-      if (current.length < 2) {
-        current.push({ time: Date.now() });
-        return current;
-      }
-      return;
-    }, (err, committed, snapshot) => {
-      if (committed) {
-        const list = snapshot.val();
-        if (list && list.length <= 2) {
-          showWinner(list.length);
-        } else {
-          showLoser();
-        }
+    // Registrar en Firebase y verificar posición en la tabla de clasificación
+    const scoresRef = db.ref('leaderboard');
+    const userRef = scoresRef.push();
+    
+    userRef.set({
+      score: finalScore,
+      time: Date.now()
+    }).then(() => {
+      checkRanking(userRef.key, finalScore);
+    });
+  }
+
+  function checkRanking(myKey, myScore) {
+    db.ref('leaderboard').orderByChild('score').limitToLast(2).once('value', (snapshot) => {
+      let topTwoKeys = [];
+      snapshot.forEach(child => {
+        topTwoKeys.unshift(child.key); // Ordenar de mayor a menor
+      });
+
+      if (topTwoKeys.includes(myKey)) {
+        let pos = topTwoKeys.indexOf(myKey) + 1;
+        showWinner(pos, myScore);
       } else {
-        showLoser();
+        showLoser(myScore);
       }
     });
   }
 
-  function showWinner(pos) {
+  function showWinner(pos, myScore) {
     document.body.className = "winner";
     document.getElementById('app').innerHTML = `
-      <h1>⚡ ¡SISTEMA RESTAURADO! ⚡</h1>
-      <p style="font-size: 20px; font-weight: bold; color:#000; margin-bottom:15px;">¡ERES EL GANADOR #${pos}!</p>
-      <p style="color:#000; font-weight: 600;">Levanta tu teléfono en el aire con esta pantalla verde encendida para que te vean desde el escenario.</p>
+      <h1>⚡ ¡NODO LÍDER! ⚡</h1>
+      <p style="font-size: 22px; font-weight: bold; color:#000; margin: 10px 0;">¡TOP #${pos} CON ${myScore} PUNTOS!</p>
+      <p style="color:#000; font-weight: 600;">Levanta tu teléfono en el aire con esta pantalla verde encendida y sube al escenario.</p>
     `;
     if (navigator.vibrate) navigator.vibrate([300, 100, 300, 100, 500]);
   }
 
-  function showLoser() {
-    document.body.className = "loser";
+  function showLoser(myScore) {
     document.getElementById('app').innerHTML = `
-      <h2>⚠ NODOS OCUPADOS</h2>
-      <p>Los 2 primeros usuarios en agitar su teléfono restablecieron la red antes.</p>
+      <h2 style="color:#ff0055;">PUNTAJE REGISTRADO</h2>
+      <p style="font-size: 20px; color: #fff; margin: 15px 0;">Puntuación: <b>${myScore}</b></p>
+      <p style="color:#a0aec0; font-size: 13px;">Los 2 puntajes más altos ya ocuparon la cima de la red.</p>
       <br>
-      <p style="color:#a0aec0; font-size:12px;">En un mundo con lag, solo la velocidad real de Fulldata te salva.</p>
+      <p style="color:#00e5ff; font-size:12px;">En un mundo con lag, solo la ultra-velocidad de Fulldata te salva.</p>
     `;
   }
 </script>
