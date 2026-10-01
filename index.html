@@ -17,9 +17,9 @@
     .hud span { color: #fff; }
 
     /* Cuadrícula de Nodos (3x3) */
-    .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; width: 100%; aspect-ratio: 1; margin-bottom: 15px; }
-    .node { background: #0d1527; border: 2px solid rgba(0, 229, 255, 0.2); border-radius: 12px; transition: transform 0.05s, background-color 0.05s; -webkit-tap-highlight-color: transparent; }
-    .node.active { background: #00e5ff; border-color: #fff; box-shadow: 0 0 20px #00e5ff; transform: scale(0.96); }
+    .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; width: 100%; aspect-ratio: 1; margin-bottom: 15px; touch-action: manipulation; }
+    .node { background: #0d1527; border: 2px solid rgba(0, 229, 255, 0.2); border-radius: 12px; transition: background-color 0.05s ease; -webkit-tap-highlight-color: transparent; }
+    .node.active { background: #00e5ff !important; border-color: #fff !important; box-shadow: 0 0 25px #00e5ff; }
 
     .btn-start { width: 100%; padding: 16px; background: linear-gradient(135deg, #00e5ff, #0077ff); color: #000; font-weight: 900; border: none; border-radius: 12px; font-size: 16px; text-transform: uppercase; cursor: pointer; box-shadow: 0 0 15px rgba(0,229,255,0.4); }
 
@@ -28,7 +28,7 @@
     body.winner .card { background: #fff; border: 4px solid #000; }
     body.winner h1 { font-size: 26px; color: #000; }
 
-    /* Estilo Finalizado / Esperando resultados */
+    /* Estilo Finalizado */
     body.finished { background-color: #09101f !important; color: #00e5ff !important; }
   </style>
 </head>
@@ -44,22 +44,22 @@
   </div>
 
   <div class="grid" id="grid" style="display: none;">
-    <div class="node" onclick="tapNode(0)"></div>
-    <div class="node" onclick="tapNode(1)"></div>
-    <div class="node" onclick="tapNode(2)"></div>
-    <div class="node" onclick="tapNode(3)"></div>
-    <div class="node" onclick="tapNode(4)"></div>
-    <div class="node" onclick="tapNode(5)"></div>
-    <div class="node" onclick="tapNode(6)"></div>
-    <div class="node" onclick="tapNode(7)"></div>
-    <div class="node" onclick="tapNode(8)"></div>
+    <div class="node" id="node-0"></div>
+    <div class="node" id="node-1"></div>
+    <div class="node" id="node-2"></div>
+    <div class="node" id="node-3"></div>
+    <div class="node" id="node-4"></div>
+    <div class="node" id="node-5"></div>
+    <div class="node" id="node-6"></div>
+    <div class="node" id="node-7"></div>
+    <div class="node" id="node-8"></div>
   </div>
 
-  <button class="btn-start" id="startBtn" onclick="startGame()">⚡ COMENCAR PRUEBA</button>
+  <button class="btn-start" id="startBtn" onclick="startGame()">⚡ COMENZAR PRUEBA</button>
 </div>
 
 <script>
-  // Firebase Config (Coloca tus credenciales reales de Firebase)
+  // Firebase Config (Coloca tus credenciales reales)
   const firebaseConfig = {
     apiKey: "TU_API_KEY",
     authDomain: "tu-proyecto.firebaseapp.com",
@@ -79,10 +79,26 @@
   let score = 0;
   let timeLeft = 15;
   let activeIndex = -1;
-  let gameInterval = null;
+  let gameTimeout = null;
   let timerInterval = null;
   let isPlaying = false;
-  const nodes = document.getElementsByClassName('node');
+  const nodes = [];
+
+  // Inicializar listeners táctiles directos en cada casilla
+  window.onload = () => {
+    for (let i = 0; i < 9; i++) {
+      const el = document.getElementById(`node-${i}`);
+      nodes.push(el);
+      
+      // Asignar eventos de toque rápido (touchstart / pointerdown) para evitar el delay de 300ms del click en móviles
+      const handleTap = (e) => {
+        e.preventDefault();
+        tapNode(i);
+      };
+
+      el.addEventListener('pointerdown', handleTap);
+    }
+  };
 
   function startGame() {
     document.getElementById('startBtn').style.display = 'none';
@@ -95,9 +111,9 @@
     document.getElementById('scoreText').innerText = score;
     document.getElementById('timeText').innerText = timeLeft;
 
-    nextPulse();
+    spawnNewNode();
     
-    // Temporizador de cuenta regresiva
+    // Temporizador principal
     timerInterval = setInterval(() => {
       timeLeft--;
       document.getElementById('timeText').innerText = timeLeft;
@@ -107,15 +123,18 @@
     }, 1000);
   }
 
-  function nextPulse() {
+  function spawnNewNode() {
     if (!isPlaying) return;
 
-    // Apagar nodo anterior
-    if (activeIndex !== -1) {
+    // Limpiar temporizador previo
+    if (gameTimeout) clearTimeout(gameTimeout);
+
+    // Apagar nodo encendido previamente
+    if (activeIndex !== -1 && nodes[activeIndex]) {
       nodes[activeIndex].classList.remove('active');
     }
 
-    // Elegir nuevo nodo al azar
+    // Seleccionar una nueva casilla al azar distinta a la anterior
     let newIndex;
     do {
       newIndex = Math.floor(Math.random() * 9);
@@ -124,32 +143,33 @@
     activeIndex = newIndex;
     nodes[activeIndex].classList.add('active');
 
-    // Cambiar de casilla cada 450 ms (velocidad rápida)
-    clearTimeout(gameInterval);
-    gameInterval = setTimeout(nextPulse, 450);
+    // Si el usuario no la toca en 600 ms, salta automáticamente a otra
+    gameTimeout = setTimeout(() => {
+      if (isPlaying) spawnNewNode();
+    }, 600);
   }
 
   function tapNode(index) {
     if (!isPlaying) return;
 
+    // Verificar si la casilla tocada es la activa actualmente
     if (index === activeIndex) {
       score++;
       document.getElementById('scoreText').innerText = score;
       
-      // Vibración rápida al acertar
-      if (navigator.vibrate) navigator.vibrate(40);
-      
-      // Saltar inmediatamente a la siguiente casilla al acertar
-      nextPulse();
+      if (navigator.vibrate) navigator.vibrate(30);
+
+      // Inmediatamente cambiar a la siguiente casilla
+      spawnNewNode();
     }
   }
 
   function endGame() {
     isPlaying = false;
     clearInterval(timerInterval);
-    clearTimeout(gameInterval);
+    if (gameTimeout) clearTimeout(gameTimeout);
 
-    if (activeIndex !== -1) {
+    if (activeIndex !== -1 && nodes[activeIndex]) {
       nodes[activeIndex].classList.remove('active');
     }
 
@@ -160,7 +180,6 @@
     document.body.className = "finished";
     
     if (!db) {
-      // Prueba local sin Firebase
       document.getElementById('app').innerHTML = `
         <h2>¡TIEMPO AGOTADO!</h2>
         <p style="font-size: 18px; color: #fff; margin: 15px 0;">Tu puntaje final: <b style="color:#00e5ff">${finalScore}</b> nodos.</p>
@@ -175,7 +194,6 @@
       <p style="color:#a0aec0; font-size: 12px;">Verificando posición en la red central...</p>
     `;
 
-    // Registrar en Firebase y verificar posición en la tabla de clasificación
     const scoresRef = db.ref('leaderboard');
     const userRef = scoresRef.push();
     
@@ -191,7 +209,7 @@
     db.ref('leaderboard').orderByChild('score').limitToLast(2).once('value', (snapshot) => {
       let topTwoKeys = [];
       snapshot.forEach(child => {
-        topTwoKeys.unshift(child.key); // Ordenar de mayor a menor
+        topTwoKeys.unshift(child.key);
       });
 
       if (topTwoKeys.includes(myKey)) {
